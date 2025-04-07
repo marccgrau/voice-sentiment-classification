@@ -14,8 +14,8 @@ import whisper
 
 def set_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=r"data/COG/", type=str)
-    parser.add_argument("--output_dir", default=r"datasets/", type=str)
+    parser.add_argument("--data_dir", default=r"data/annoyance/", type=str)
+    parser.add_argument("--output_dir", default=r"datasets/annoyance/", type=str)
     parser.add_argument("--cls_num", default=2, type=int)
     parser.add_argument("--audio_len", default=30, type=int)
     args = parser.parse_args()

@@ -23,15 +23,16 @@ from models.WhisPAr import WhisPAr
 
 def set_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=r"datasets/aggression/")
+    parser.add_argument("--emotion", default="annoyance")
+    parser.add_argument("--data_dir", default=r"datasets/")
     parser.add_argument("--output_path", default="output")
     parser.add_argument("--cls_num", type=int, default=2)
     parser.add_argument("--audio_len", default=30, type=int)
     parser.add_argument("--prompt_len", type=int, default=2)
     parser.add_argument("--bottleneck_dim", type=int, default=16)
     parser.add_argument("--adapt_list", type=list, default=None)
-    parser.add_argument("--lr", type=float, default=0.0001)
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--bs_train", type=int, default=16)
     parser.add_argument("--dev_size", type=int, default=10)
     parser.add_argument("--bs_eval", type=int, default=16)
@@ -73,7 +74,9 @@ def train(model, train_loader, dev_dataloader, optimizer, scheduler, args):
 
             if step % args.save_step == 0:
                 logger.info("saving checkpoint at step {}".format(step))
-                save_path = join(args.output_path, "checkpoint-{}.pt".format(step))
+                save_path = join(
+                    args.output_path, f"{args.emotion}", "checkpoint-{}.pt".format(step)
+                )
                 torch.save(model.state_dict(), save_path)
 
             loss.backward()
@@ -81,7 +84,9 @@ def train(model, train_loader, dev_dataloader, optimizer, scheduler, args):
             scheduler.step()
             optimizer.zero_grad()
     logger.info("saving model")
-    save_path = join(args.output_path, "Model.pt")
+    save_path = join(
+        args.output_path, f"{args.emotion}", f"Model_{args.epochs}_{args.emotion}.pt"
+    )
     torch.save(model.state_dict(), save_path)
 
 
@@ -111,13 +116,15 @@ if __name__ == "__main__":
     args = set_args()
     args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    if not os.path.exists(args.output_path):
-        os.makedirs(args.output_path)
+    if not os.path.exists(f"{args.output_path}/{args.emotion}"):
+        os.makedirs(f"{args.output_path}/{args.emotion}")
 
     cur_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
-    logger.add(join(args.output_path, "train-{}.log".format(cur_time)))
+    logger.add(
+        join(args.output_path, f"{args.emotion}", "train-{}.log".format(cur_time))
+    )
     logger.info(args)
-    writer = SummaryWriter(args.output_path)
+    writer = SummaryWriter(f"{args.output_path}/{args.emotion}")
 
     model = WhisPAr(
         cls_num=args.cls_num,
@@ -127,12 +134,15 @@ if __name__ == "__main__":
         adapt_list=args.adapt_list,
     ).to(args.device)
 
-    train_dataset = WhisPArDataset(args.data_dir + "train.pkl")
+    train_dataset = WhisPArDataset(args.data_dir + f"{args.emotion}/train.pkl")
     train_dataloader = DataLoader(train_dataset, batch_size=args.bs_train, shuffle=True)
     del train_dataset
-    val_dataset = WhisPArDataset(args.data_dir + "valid.pkl")
+    val_dataset = WhisPArDataset(args.data_dir + f"{args.emotion}/valid.pkl")
     val_dataloader = DataLoader(val_dataset, batch_size=args.bs_eval, shuffle=False)
     del val_dataset
+    test_dataset = WhisPArDataset(args.data_dir + f"{args.emotion}/test.pkl")
+    test_dataloader = DataLoader(test_dataset, batch_size=args.bs_eval, shuffle=False)
+    del test_dataset
 
     t_total = len(train_dataloader) * args.epochs
     optimizer = Adafactor(model.parameters(), relative_step=False, lr=args.lr)
@@ -140,4 +150,8 @@ if __name__ == "__main__":
         optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total
     )
     train(model, train_dataloader, val_dataloader, optimizer, scheduler, args)
+    test_acc, test_loss, _, _ = evaluate(args, model, test_dataloader)
+    logger.info(f"Test Accuracy: {test_acc}, Test Loss: {test_loss}")
+    writer.add_scalar("test_loss", test_loss, t_total)
+    writer.add_scalar("test_acc", test_acc, t_total)
     logger.info("Training Done.")

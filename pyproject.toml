@@ -5,13 +5,16 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "datasets>=3.5.0",
     "ipykernel>=6.29.5",
+    "librosa>=0.11.0",
     "loguru>=0.7.3",
     "numpy>=1.16.0",
     "openai-whisper>=20240930",
     "pandas>=2.2.3",
     "ruff>=0.11.2",
     "scikit-learn>=1.6.1",
+    "soundfile>=0.13.1",
     "tensorboard>=2.19.0",
     "tensorboardx>=2.6.2.2",
     "torch>=2.6.0",
