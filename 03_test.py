@@ -25,7 +25,7 @@ def set_args():
     parser.add_argument("--data_dir", default=r"datasets/")
     parser.add_argument("--model_path", default=r"output/Model.pt")
     parser.add_argument("--output_path", default="output")
-    parser.add_argument("--cls_num", type=int, default=6)
+    parser.add_argument("--cls_num", type=int, default=2)
     parser.add_argument("--audio_len", default=30, type=int)
     parser.add_argument("--prompt_len", type=int, default=2)
     parser.add_argument("--bottleneck_dim", type=int, default=16)
